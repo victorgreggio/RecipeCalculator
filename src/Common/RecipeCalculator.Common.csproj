@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AGTec.Common.Base" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Context\**" />
+    <Compile Remove="Parser\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Context\**" />
+    <EmbeddedResource Remove="Parser\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Context\**" />
+    <None Remove="Parser\**" />
+  </ItemGroup>
+
+</Project>

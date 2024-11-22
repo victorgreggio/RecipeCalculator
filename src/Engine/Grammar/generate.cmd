@@ -1,0 +1,1 @@
+java -jar ..\antlr4\antlr-4.12.0-complete.jar -Dlanguage=CSharp -listener -visitor -o ../Generated/ -package RecipeCalculator.Engine.Parser Formula.g4
