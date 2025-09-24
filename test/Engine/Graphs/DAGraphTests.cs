@@ -75,7 +75,7 @@ public class DAGraphTests
             graph.AddNode(3, 1, new[] { 4 });
             graph.AddNode(4, 1, new[] { 5 });
 
-            Assert.ThrowsException<ArgumentException>(() => graph.AddNode(1, 1, new[] { 5 }));
+            Assert.ThrowsExactly<ArgumentException>(() => graph.AddNode(1, 1, new[] { 5 }));
         }
 
         [TestMethod]
@@ -87,8 +87,8 @@ public class DAGraphTests
             graph.AddNode(3, 1, new[] { 4 });
             graph.AddNode(4, 1, new[] { 5 });
 
-            Assert.ThrowsException<ArgumentException>(() => graph.AddNode(5, 1, new[] { 1 }));
-            Assert.ThrowsException<ArgumentException>(() => graph.AddNode(5, 1, new[] { 5 }));
+            Assert.ThrowsExactly<ArgumentException>(() => graph.AddNode(5, 1, new[] { 1 }));
+            Assert.ThrowsExactly<ArgumentException>(() => graph.AddNode(5, 1, new[] { 5 }));
         }
 
         [TestMethod]
@@ -142,7 +142,7 @@ public class DAGraphTests
             Assert.AreEqual(3, clone.Count);
             Assert.AreEqual(3, layers.Count);
             Assert.AreEqual(0, detached.Count);
-            Assert.ThrowsException<ArgumentNullException>(() => clone.Trim(null!));
-            Assert.ThrowsException<ArgumentException>(() => clone.RemoveNode(100));
+            Assert.ThrowsExactly<ArgumentNullException>(() => clone.Trim(null!));
+            Assert.ThrowsExactly<ArgumentException>(() => clone.RemoveNode(100));
         }
 }

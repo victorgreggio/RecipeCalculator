@@ -21,7 +21,7 @@ public class IfWithFuncCallTest : BaseEngineRunnerTest
         var parseTree = FormulaParserHelper.Parse(formula);
         ParsingContext.ParseTreeCache.Set(formula, parseTree);
         
-        Sut.Execute(new[] {formula}, new IFunction[]{new GetNum1Func(), new GetNum2Func(), new GetNum3Func()});
+        Sut.Execute(new[] {formula}, [new GetNum1Func(), new GetNum2Func(), new GetNum3Func()]);
 
         var result = ParsingContext.FormulaResultCache.Get(formulaName);
         Assert.IsNotNull(result);

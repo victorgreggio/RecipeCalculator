@@ -32,11 +32,9 @@ public class DoubleValueTests : BaseTestWithSut<IValue>
     }
     
     [TestMethod]
-    [ExpectedException(typeof(InvalidCastException))]
     public void TestAsStringOperation()
     {
-        var stringValue = Sut.As<string>();
-        Assert.IsNotNull(stringValue);
+        Assert.ThrowsExactly<InvalidCastException>(() => Sut.As<string>());
     }
 
     [TestMethod]
