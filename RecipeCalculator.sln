@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.UI", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.NPV", "src\RecipeCalculator.NPV\RecipeCalculator.NPV.csproj", "{A8061A39-D4B9-41A7-96D9-9F65A466D62B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.NPV.Tests", "test\RecipeCalculator.NPV.Tests\RecipeCalculator.NPV.Tests.csproj", "{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.NPV.Tests", "test\NPV\RecipeCalculator.NPV.Tests.csproj", "{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
