@@ -193,6 +193,13 @@ static async Task ProcessStandardFileAsync(string inputFile, string outputFile, 
     Console.WriteLine($"Total Adjusted NPV: ${optimizationResult.TotalAdjustedNPV:N2}");
     Console.WriteLine();
     
+    Console.WriteLine("Selected Projects:");
+    foreach (var projectId in optimizationResult.SelectedProjects.OrderBy(p => p))
+    {
+        Console.WriteLine($"  - {projectId}");
+    }
+    Console.WriteLine();
+    
     // Write results to file
     using var outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None, 65536);
     using var writer = new StreamWriter(outputStream, Encoding.UTF8);
@@ -324,7 +331,15 @@ static async Task ProcessLargeFileAsync(string inputFile, string outputFile, IEn
     Console.WriteLine($"Solve Time: {optimizationResult.SolveTime:F3} seconds");
     Console.WriteLine($"Selected Projects: {optimizationResult.ProjectCount}");
     Console.WriteLine($"Total Investment: ${optimizationResult.TotalInvestment:N2}");
+    Console.WriteLine($"Remaining Budget: ${optimizationResult.RemainingBudget:N2}");
     Console.WriteLine($"Total Adjusted NPV: ${optimizationResult.TotalAdjustedNPV:N2}");
+    Console.WriteLine();
+    
+    Console.WriteLine("Selected Projects:");
+    foreach (var projectId in optimizationResult.SelectedProjects.OrderBy(p => p))
+    {
+        Console.WriteLine($"  - {projectId}");
+    }
     Console.WriteLine();
     
     // Write results
