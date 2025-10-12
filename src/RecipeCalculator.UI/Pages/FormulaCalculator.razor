@@ -514,6 +514,12 @@ end</pre>
             {
                 ShowError($"No result returned for formula '{currentFormulaName}'.");
             }
+            
+            // Clear caches except variables
+            ParsingContext.FormulaResultCache.Clear();
+            ParsingContext.FunctionCache.Clear();
+            ParsingContext.FunctionResultCache.Clear();
+            ParsingContext.ParseTreeCache.Clear();
         }
         catch (Exception ex)
         {

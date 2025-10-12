@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.Engine", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.UI", "src\RecipeCalculator.UI\RecipeCalculator.UI.csproj", "{08FE9607-DEE6-408C-903A-991D4D0C4179}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.NPV", "src\RecipeCalculator.NPV\RecipeCalculator.NPV.csproj", "{A8061A39-D4B9-41A7-96D9-9F65A466D62B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RecipeCalculator.NPV.Tests", "test\RecipeCalculator.NPV.Tests\RecipeCalculator.NPV.Tests.csproj", "{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +47,14 @@ Global
 		{08FE9607-DEE6-408C-903A-991D4D0C4179}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{08FE9607-DEE6-408C-903A-991D4D0C4179}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{08FE9607-DEE6-408C-903A-991D4D0C4179}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8061A39-D4B9-41A7-96D9-9F65A466D62B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8061A39-D4B9-41A7-96D9-9F65A466D62B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8061A39-D4B9-41A7-96D9-9F65A466D62B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8061A39-D4B9-41A7-96D9-9F65A466D62B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -53,5 +65,7 @@ Global
 		{0C18CB34-13A3-43FA-9730-FD0AAC76AB12} = {3CED42F0-0AAA-40A5-A459-1BD692C5EB6C}
 		{D8A46956-B956-410A-BE8E-565F03491C77} = {3CED42F0-0AAA-40A5-A459-1BD692C5EB6C}
 		{08FE9607-DEE6-408C-903A-991D4D0C4179} = {3CED42F0-0AAA-40A5-A459-1BD692C5EB6C}
+		{A8061A39-D4B9-41A7-96D9-9F65A466D62B} = {3CED42F0-0AAA-40A5-A459-1BD692C5EB6C}
+		{375AC60D-2C5E-45E3-9DDF-1EDA4FDAFD50} = {EF736CC2-0029-4375-9D3A-DAFE410302A3}
 	EndGlobalSection
 EndGlobal
