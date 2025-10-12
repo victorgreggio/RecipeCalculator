@@ -150,6 +150,19 @@ jobs:
           output_location: "wwwroot"
 ```
 
+#### Skipping Deployment When Secrets Are Missing
+
+If you want the workflow to skip deployment when the Azure secret is not configured (instead of failing), you can enable the `SKIP_DEPLOY_ON_MISSING_SECRETS` flag:
+
+1. Go to your repository settings → Secrets and variables → Actions → Variables tab
+2. Create a new repository variable: `SKIP_DEPLOY_ON_MISSING_SECRETS` with value `true`
+3. The workflow will now skip deployment gracefully if `AZURE_STATIC_WEB_APPS_API_TOKEN` is missing
+
+This is useful for:
+- Forks of the repository that don't have Azure deployments configured
+- Development branches that shouldn't deploy to Azure
+- Testing the build process without actually deploying
+
 ---
 
 ### Option 2: Azure Storage + CDN (Manual Control)

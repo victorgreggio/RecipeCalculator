@@ -39,11 +39,15 @@ LOCATION=${LOCATION:-eastus2}
 
 read -p "Do you have a GitHub repository? (y/n): " HAS_GITHUB
 
+read -p "Skip deployment if Azure secret is missing? (y/n, default: n): " SKIP_DEPLOY_ON_MISSING_SECRETS
+SKIP_DEPLOY_ON_MISSING_SECRETS=${SKIP_DEPLOY_ON_MISSING_SECRETS:-n}
+
 echo ""
 echo -e "${GREEN}Configuration:${NC}"
 echo "  Resource Group: $RESOURCE_GROUP"
 echo "  App Name: $APP_NAME"
 echo "  Location: $LOCATION"
+echo "  Skip on missing secrets: $SKIP_DEPLOY_ON_MISSING_SECRETS"
 echo ""
 
 # Create resource group
@@ -83,7 +87,22 @@ else
     DEPLOYMENT_TOKEN=$(az staticwebapp secrets list \
         --name "$APP_NAME" \
         --resource-group "$RESOURCE_GROUP" \
-        --query "properties.apiKey" -o tsv)
+        --query "properties.apiKey" -o tsv 2>/dev/null)
+    
+    if [ -z "$DEPLOYMENT_TOKEN" ] || [ "$DEPLOYMENT_TOKEN" = "null" ]; then
+        if [ "$SKIP_DEPLOY_ON_MISSING_SECRETS" = "y" ] || [ "$SKIP_DEPLOY_ON_MISSING_SECRETS" = "Y" ]; then
+            echo -e "${YELLOW}Warning: Azure deployment token is missing. Skipping deployment as requested.${NC}"
+            echo ""
+            echo -e "${GREEN}======================================${NC}"
+            echo -e "${GREEN}Setup Complete (Deployment Skipped)${NC}"
+            echo -e "${GREEN}======================================${NC}"
+            exit 0
+        else
+            echo -e "${RED}Error: Failed to get deployment token from Azure.${NC}"
+            echo -e "${RED}The Static Web App may not exist or you may not have permissions.${NC}"
+            exit 1
+        fi
+    fi
     
     echo ""
     echo -e "${YELLOW}Building application...${NC}"

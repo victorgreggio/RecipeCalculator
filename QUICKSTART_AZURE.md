@@ -158,6 +158,12 @@ Check GitHub Actions tab in your repository for logs.
 ### "404 on routes"
 The `staticwebapp.config.json` handles routing automatically.
 
+### "Missing Azure secret in GitHub Actions"
+If you want to skip deployment when the secret is missing (e.g., in forks):
+1. Go to Settings → Secrets and variables → Actions → Variables
+2. Add `SKIP_DEPLOY_ON_MISSING_SECRETS` = `true`
+3. Builds will succeed but skip deployment
+
 ## Full Documentation
 
 For advanced scenarios, see: [AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md)
