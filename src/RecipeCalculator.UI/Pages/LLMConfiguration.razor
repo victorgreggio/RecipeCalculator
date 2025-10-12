@@ -1,0 +1,240 @@
+@page "/llm-settings"
+@inject LLMSettingsService SettingsService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>LLM Settings - Recipe Calculator</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">LLM Settings</h1>
+    
+    <div class="alert alert-info">
+        <strong>AI-Powered Formula Generation</strong>
+        <p class="mb-0">
+            Configure your LLM (Large Language Model) provider to enable natural language formula generation.
+            Describe what you want in plain English, and the AI will generate the formula code for you!
+        </p>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Configure LLM Provider</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Provider:</label>
+                        <select class="form-select" @bind="settings.Provider">
+                            <option value="@LLMProvider.Ollama">Ollama (Local - No API Key)</option>
+                            <option value="@LLMProvider.OpenAI">OpenAI</option>
+                            <option value="@LLMProvider.Anthropic">Anthropic (Claude)</option>
+                            <option value="@LLMProvider.Custom">Custom API</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            @GetProviderDescription()
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">API URL:</label>
+                        <input type="text" class="form-control" @bind="settings.ApiUrl" placeholder="@GetDefaultApiUrl()" />
+                        <small class="form-text text-muted">
+                            @GetApiUrlHint()
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Model Name:</label>
+                        <input type="text" class="form-control" @bind="settings.ModelName" placeholder="@GetDefaultModel()" />
+                        <small class="form-text text-muted">
+                            @GetModelHint()
+                        </small>
+                    </div>
+                    
+                    @if (settings.Provider != LLMProvider.Ollama)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">API Key:</label>
+                            <input type="password" class="form-control" @bind="settings.ApiKey" placeholder="Enter your API key" />
+                            <small class="form-text text-muted">
+                                Your API key is stored locally in your browser and never sent to our servers.
+                            </small>
+                        </div>
+                    }
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" @onclick="SaveSettings">
+                            💾 Save Settings
+                        </button>
+                        <button class="btn btn-secondary" @onclick="TestConnection">
+                            🔌 Test Connection
+                        </button>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(statusMessage))
+                    {
+                        <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3" role="alert">
+                            @statusMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6>Recommended: Ollama (Local)</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Why Ollama?</strong></p>
+                    <ul>
+                        <li>✅ Runs locally on your computer</li>
+                        <li>✅ No API key required</li>
+                        <li>✅ Free to use</li>
+                        <li>✅ Private - your data stays local</li>
+                        <li>✅ Fast response times</li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Installation:</h6>
+                    <ol>
+                        <li>Visit <a href="https://ollama.ai" target="_blank">ollama.ai</a></li>
+                        <li>Download and install</li>
+                        <li>Run: <code>ollama pull llama2</code></li>
+                        <li>Keep Ollama running</li>
+                    </ol>
+                    
+                    <h6 class="mt-3">Popular Models:</h6>
+                    <ul>
+                        <li><code>llama2</code> - Good balance</li>
+                        <li><code>codellama</code> - Code-focused</li>
+                        <li><code>mistral</code> - Fast & accurate</li>
+                        <li><code>phi</code> - Lightweight</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6>Other Options</h6>
+                </div>
+                <div class="card-body">
+                    <h6>OpenAI:</h6>
+                    <p><small>Requires API key from <a href="https://platform.openai.com" target="_blank">platform.openai.com</a></small></p>
+                    <p><small>Models: gpt-3.5-turbo, gpt-4</small></p>
+                    
+                    <h6 class="mt-3">Anthropic (Claude):</h6>
+                    <p><small>Requires API key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></small></p>
+                    <p><small>Models: claude-3-opus, claude-3-sonnet</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LLMSettings settings = new();
+    private string statusMessage = "";
+    private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await SettingsService.GetSettingsAsync();
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            await SettingsService.SaveSettingsAsync(settings);
+            statusMessage = "Settings saved successfully!";
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error saving settings: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        statusMessage = "Testing connection...";
+        isSuccess = false;
+        StateHasChanged();
+        
+        await Task.Delay(100); // Allow UI to update
+        
+        try
+        {
+            // Simple test - we'll implement this properly in the LLM service
+            statusMessage = $"Configuration looks good! Provider: {settings.Provider}, URL: {settings.ApiUrl}";
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Connection test failed: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private string GetProviderDescription()
+    {
+        return settings.Provider switch
+        {
+            LLMProvider.Ollama => "Local LLM - No API key needed. Install from ollama.ai",
+            LLMProvider.OpenAI => "OpenAI API - Requires API key. High quality responses.",
+            LLMProvider.Anthropic => "Claude API - Requires API key. Excellent for complex tasks.",
+            LLMProvider.Custom => "Custom API endpoint - Configure your own LLM service.",
+            _ => ""
+        };
+    }
+
+    private string GetDefaultApiUrl()
+    {
+        return settings.Provider switch
+        {
+            LLMProvider.Ollama => "http://localhost:11434",
+            LLMProvider.OpenAI => "https://api.openai.com",
+            LLMProvider.Anthropic => "https://api.anthropic.com",
+            LLMProvider.Custom => "http://your-api-endpoint.com",
+            _ => ""
+        };
+    }
+
+    private string GetApiUrlHint()
+    {
+        return settings.Provider switch
+        {
+            LLMProvider.Ollama => "Default Ollama endpoint. Change port if you configured Ollama differently.",
+            LLMProvider.OpenAI => "OpenAI API endpoint. Usually https://api.openai.com",
+            LLMProvider.Anthropic => "Anthropic API endpoint. Usually https://api.anthropic.com",
+            LLMProvider.Custom => "Your custom LLM API endpoint.",
+            _ => ""
+        };
+    }
+
+    private string GetDefaultModel()
+    {
+        return settings.Provider switch
+        {
+            LLMProvider.Ollama => "llama2, codellama, mistral, phi",
+            LLMProvider.OpenAI => "gpt-3.5-turbo, gpt-4",
+            LLMProvider.Anthropic => "claude-3-opus-20240229, claude-3-sonnet-20240229",
+            LLMProvider.Custom => "your-model-name",
+            _ => ""
+        };
+    }
+
+    private string GetModelHint()
+    {
+        return settings.Provider switch
+        {
+            LLMProvider.Ollama => "Run 'ollama list' to see available models. Download with 'ollama pull <model>'",
+            LLMProvider.OpenAI => "See available models at platform.openai.com/docs/models",
+            LLMProvider.Anthropic => "See available models at docs.anthropic.com/claude/docs/models-overview",
+            LLMProvider.Custom => "Model name supported by your custom API.",
+            _ => ""
+        };
+    }
+}

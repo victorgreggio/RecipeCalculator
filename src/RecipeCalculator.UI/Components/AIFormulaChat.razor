@@ -1,0 +1,302 @@
+@inject LLMService LLMService
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">🤖 AI Formula Generator</h5>
+            <a href="/llm-settings" class="btn btn-sm btn-light">⚙️ Settings</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">
+            Describe what you want to calculate in natural language, and AI will generate the formula code for you!
+        </p>
+        
+        <div class="mb-3">
+            <textarea class="form-control" 
+                      @bind="userPrompt" 
+                      rows="3" 
+                      placeholder="Example: Calculate 10% discount if quantity is more than 50 items, otherwise no discount"
+                      style="resize: vertical;"></textarea>
+        </div>
+        
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-primary" @onclick="GenerateFormula" disabled="@isGenerating">
+                @if (isGenerating)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <text>Generating...</text>
+                }
+                else
+                {
+                    <text>✨ Generate Formula</text>
+                }
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadExample1">Example 1</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadExample2">Example 2</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadExample3">Example 3</button>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(generatedCode))
+        {
+            <div class="alert alert-success">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong>Generated Formula:</strong>
+                    <button class="btn btn-sm btn-success" @onclick="UseGeneratedFormula">
+                        📋 Use This Formula
+                    </button>
+                </div>
+                <pre class="bg-dark text-light p-3 mb-0" style="border-radius: 5px;"><code>@generatedCode</code></pre>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error:</strong> @errorMessage
+            </div>
+        }
+        
+        <details class="mt-3">
+            <summary class="text-muted" style="cursor: pointer;">
+                <small>💡 Tips for better results</small>
+            </summary>
+            <ul class="small mt-2">
+                <li>Be specific about the calculation you want</li>
+                <li>Mention variable names you want to use</li>
+                <li>Describe conditions clearly (if/then/else)</li>
+                <li>Specify what to return</li>
+                <li>Example: "If price is greater than 100, apply 15% discount, otherwise 10%"</li>
+            </ul>
+        </details>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnFormulaGenerated { get; set; }
+    
+    private string userPrompt = "";
+    private string generatedCode = "";
+    private string errorMessage = "";
+    private bool isGenerating = false;
+
+    private async Task GenerateFormula()
+    {
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            errorMessage = "Please enter a description of what you want to calculate.";
+            return;
+        }
+
+        isGenerating = true;
+        errorMessage = "";
+        generatedCode = "";
+        StateHasChanged();
+
+        try
+        {
+            var grammar = GetGrammarContext();
+            var examples = GetExamples();
+            var customFunctions = GetCustomFunctionsContext();
+            
+            var result = await LLMService.GenerateFormulaAsync(userPrompt, grammar, examples, customFunctions);
+            
+            // Clean up the result (remove markdown code blocks if present)
+            generatedCode = CleanGeneratedCode(result);
+            
+            if (generatedCode.StartsWith("Error:"))
+            {
+                errorMessage = generatedCode;
+                generatedCode = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to generate formula: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UseGeneratedFormula()
+    {
+        await OnFormulaGenerated.InvokeAsync(generatedCode);
+    }
+
+    private void LoadExample1()
+    {
+        userPrompt = "Calculate a discount: if quantity is more than 100, apply 20% discount. If quantity is more than 50, apply 10% discount. Otherwise no discount.";
+    }
+
+    private void LoadExample2()
+    {
+        userPrompt = "Calculate tax: multiply the price by a tax rate of 0.15, then add it to the original price to get the total.";
+    }
+
+    private void LoadExample3()
+    {
+        userPrompt = "Use GetNum3Func with parameter 'ABC' and multiply the result by 10.";
+    }
+
+    private string GetCustomFunctionsContext()
+    {
+        return @"
+GetNum1Func() - Returns: 1.0 (no parameters)
+GetNum2Func() - Returns: 2.0 (no parameters)
+GetNum3Func(stringParam) - Returns: 3.0 if stringParam equals 'ABC' (case-insensitive), otherwise 0.0
+
+Example usage:
+- return GetNum1Func() + GetNum2Func()
+- return GetNum3Func('ABC') * 10
+- return Max(GetNum1Func(), GetNum2Func())";
+    }
+
+    private string CleanGeneratedCode(string code)
+    {
+        code = code.Trim();
+        
+        // Remove markdown code blocks
+        if (code.StartsWith("```"))
+        {
+            var codeLines = code.Split('\n');
+            code = string.Join('\n', codeLines.Skip(1).Take(codeLines.Length - 2));
+        }
+        
+        // Remove common prefixes
+        code = code.Replace("```formula", "").Replace("```", "");
+        
+        code = code.Trim();
+        
+        // Remove common explanatory prefixes (non-code lines at the start)
+        var explanatoryPhrases = new[]
+        {
+            "Here is the formula:",
+            "Here's the formula:",
+            "Here is your formula:",
+            "Here's your formula:",
+            "The formula is:",
+            "Formula:",
+            "Here you go:",
+            "Here is:",
+            "Here's:",
+            "Result:",
+            "Output:",
+            "Code:"
+        };
+        
+        foreach (var phrase in explanatoryPhrases)
+        {
+            // Case-insensitive removal of explanatory phrases at the start
+            if (code.StartsWith(phrase, StringComparison.OrdinalIgnoreCase))
+            {
+                code = code.Substring(phrase.Length).TrimStart();
+                break;
+            }
+        }
+        
+        // If the code starts with a line that doesn't look like formula code, skip it
+        var lines = code.Split('\n');
+        if (lines.Length > 1)
+        {
+            var firstLine = lines[0].Trim();
+            
+            // Check if first line is explanatory text (not code)
+            var codeKeywords = new[] { "return", "if", "//", "/*" };
+            bool firstLineIsCode = codeKeywords.Any(keyword => 
+                firstLine.StartsWith(keyword, StringComparison.OrdinalIgnoreCase));
+            
+            // If first line doesn't start with code keywords and second line does, skip first line
+            if (!firstLineIsCode && lines.Length > 1)
+            {
+                var secondLine = lines[1].Trim();
+                bool secondLineIsCode = codeKeywords.Any(keyword => 
+                    secondLine.StartsWith(keyword, StringComparison.OrdinalIgnoreCase));
+                
+                if (secondLineIsCode)
+                {
+                    // Skip the first explanatory line
+                    code = string.Join('\n', lines.Skip(1));
+                }
+            }
+        }
+        
+        return code.Trim();
+    }
+
+    private string GetGrammarContext()
+    {
+        return @"# Formula Syntax Rules
+- Every formula must start with 'return' or use if/then/else structure
+- Strings use single quotes: 'text'
+- Variables are accessed by name directly
+- Conditionals: if (condition) then ... else if (condition) then ... else ... end
+- Comments: // single line
+- No semicolons
+
+# Operators
++, -, *, /, ^ (power), mod
+=, <>, <, >, <=, >=
+and, or, !
+
+# Control Flow
+if (condition) then
+  return value
+else if (condition) then
+  return value
+else
+  return value
+end";
+    }
+
+    private string GetExamples()
+    {
+        return @"Example 1 - Simple calculation:
+return 2 + 2
+
+Example 2 - Using variables:
+return price * quantity
+
+Example 3 - With function:
+return Max(value1, value2)
+
+Example 4 - Conditional:
+if (quantity > 100) then
+  return price * 0.8
+else if (quantity > 50) then
+  return price * 0.9
+else
+  return price
+end
+
+Example 5 - Complex calculation:
+return (basePrice + shippingCost) * (1 + taxRate)
+
+Example 6 - String operation:
+if (customerType = 'Premium') then
+  return basePrice * 0.7
+else
+  return basePrice
+end
+
+Example 7 - Date function:
+return Year('2024-01-15')
+
+Example 8 - Math function:
+return Floor(price * 1.15)
+
+Example 9 - Reference another formula:
+return GetOutputFrom('Subtotal') * taxRate
+
+Example 10 - Boolean logic:
+if (isVIP and quantity > 50) then
+  return price * 0.6
+else
+  return price
+end";
+    }
+}

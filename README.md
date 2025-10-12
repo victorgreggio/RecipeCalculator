@@ -6,6 +6,8 @@ A proof-of-concept Domain-Specific Language (DSL) for calculating values based o
 
 RecipeCalculator is a C# library that provides a formula evaluation engine capable of parsing and executing mathematical and logical expressions. The project demonstrates how to build a DSL that can handle complex formula dependencies, function calls, and conditional logic through a custom grammar parser.
 
+**New in this version**: Web-based UI built with Blazor WebAssembly that provides an interactive formula editor with Monaco Editor (VS Code's editor) for writing and testing formulas in your browser!
+
 ## Key Features
 
 ### Formula System
@@ -31,6 +33,56 @@ RecipeCalculator is a C# library that provides a formula evaluation engine capab
 - Custom grammar defined in `Formula.g4`
 - Support for numbers, strings, booleans, and identifiers
 - Error handling with custom error types
+
+### Web UI
+- **Blazor WebAssembly**: Modern web-based interface that runs entirely in the browser
+- **Formula Management**: Create, save, edit, and delete multiple formulas with browser storage
+- **Variable Support**: Define and manage typed variables (Number, String, Boolean)
+- **Real-time Execution**: Execute formulas and see results immediately
+- **Custom Functions**: Built-in examples (GetNum1Func, GetNum2Func, GetNum3Func)
+- **AI-Powered Generation**: Natural language to formula code using LLM integration
+- **Syntax Guide**: Built-in reference documentation
+- **Error Display**: Clear error messages and stack traces
+- **Production Ready**: Deploy to Azure Static Web Apps for FREE
+
+## Getting Started
+
+### Web UI (Recommended for Quick Start)
+
+Run the Blazor WebAssembly application:
+
+```bash
+cd src/RecipeCalculator.UI
+dotnet run
+```
+
+Navigate to `https://localhost:5001` (or the URL shown in console) and start writing formulas!
+
+See [BLAZOR_UI_SUMMARY.md](BLAZOR_UI_SUMMARY.md) for more details about the web interface.
+
+### Deploy to Azure (Production)
+
+Deploy your application to Azure Static Web Apps for FREE:
+
+```bash
+./deploy-azure.sh
+```
+
+Or use the one-command deployment:
+
+```bash
+az staticwebapp create --name recipecalculator \
+  --resource-group RecipeCalculatorRG \
+  --source https://github.com/YOUR_USERNAME/RecipeCalculator \
+  --branch main --app-location "/src/RecipeCalculator.UI" \
+  --output-location "wwwroot" --login-with-github
+```
+
+See [QUICKSTART_AZURE.md](QUICKSTART_AZURE.md) for quick deployment guide or [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) for comprehensive deployment documentation.
+
+### Programmatic Usage
+
+Add references to `RecipeCalculator.Engine` and `RecipeCalculator.Common` in your project, then use the engine programmatically (see examples below).
 
 ## Usage Examples
 
@@ -69,19 +121,23 @@ engineRunner.Execute(new[] {formula1, formula2, formula3}, Enumerable.Empty<IFun
 ```
 RecipeCalculator/
 ├── src/
-│   ├── Common/                      # Common interfaces and models
+│   ├── RecipeCalculator.Common/     # Common interfaces and models
 │   │   ├── Formulas/               # Formula definitions (IFormula, Formula)
 │   │   ├── Function/               # Function interfaces and base classes
 │   │   ├── Values/                 # Value types and wrappers
 │   │   └── Variants/               # Variant types
-│   └── Engine/                     # Core calculation engine
-│       ├── Grammar/                # ANTLR grammar definition (Formula.g4)
-│       ├── Generated/              # ANTLR-generated parser code
-│       ├── Parser/                 # Parsing context and visitor implementations
-│       ├── Graphs/                 # Dependency graph and topological sorting
-│       ├── Function/               # Function result caching
-│       ├── Formulas/               # Formula result caching
-│       └── Exceptions/             # Custom exception types
+│   ├── RecipeCalculator.Engine/    # Core calculation engine
+│   │   ├── Grammar/                # ANTLR grammar definition (Formula.g4)
+│   │   ├── Generated/              # ANTLR-generated parser code
+│   │   ├── Parser/                 # Parsing context and visitor implementations
+│   │   ├── Graphs/                 # Dependency graph and topological sorting
+│   │   ├── Function/               # Function result caching
+│   │   ├── Formulas/               # Formula result caching
+│   │   └── Exceptions/             # Custom exception types
+│   └── RecipeCalculator.UI/        # Blazor WebAssembly web interface
+│       ├── Pages/                  # Razor pages and components
+│       ├── Layout/                 # Layout components
+│       └── wwwroot/                # Static web assets
 └── test/
     ├── Common/                     # Tests for common components
     └── Engine/                     # Tests for engine functionality
@@ -101,6 +157,12 @@ dotnet build RecipeCalculator.sln
 ### Run Tests
 ```bash
 dotnet test RecipeCalculator.sln
+```
+
+### Run Web UI
+```bash
+cd src/UI
+dotnet run
 ```
 
 ## Technical Details
@@ -128,6 +190,7 @@ This project demonstrates a proof-of-concept for:
 - Creating custom expression languages
 - Parsing and evaluating mathematical formulas
 - Handling complex business rule calculations with interdependencies
+- Creating web-based formula editors and calculators
 
 ## License
 

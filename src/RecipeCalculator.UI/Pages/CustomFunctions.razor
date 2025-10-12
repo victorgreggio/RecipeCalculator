@@ -1,0 +1,255 @@
+@page "/custom-functions"
+
+<PageTitle>Custom Functions - Recipe Calculator</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Custom Functions</h1>
+    
+    <div class="alert alert-info">
+        <strong>What are Custom Functions?</strong>
+        <p class="mb-0">
+            Custom functions are user-defined operations that extend the formula engine's capabilities. 
+            They are implemented by extending the <code>BaseFunction</code> class and can be used in formulas 
+            just like built-in functions.
+        </p>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">GetNum1Func</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Description:</h6>
+                    <p>A simple function that returns a constant number (1.0) with no parameters.</p>
+                    
+                    <h6>Parameters:</h6>
+                    <p><code>None</code></p>
+                    
+                    <h6>Returns:</h6>
+                    <p><code>Number: 1.0</code></p>
+                    
+                    <h6>Usage Example:</h6>
+                    <pre class="bg-light p-3"><code>return GetNum1Func()</code></pre>
+                    <p><strong>Result:</strong> 1</p>
+                    
+                    <h6>Source Code:</h6>
+                    <pre class="bg-dark text-light p-3" style="font-size: 0.85em;"><code>public class GetNum1Func : BaseFunction
+{
+    public GetNum1Func() : base(nameof(GetNum1Func), 0)
+    {
+    }
+
+    public override IValue Execute()
+    {
+        return new Value(1.0);
+    }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">GetNum2Func</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Description:</h6>
+                    <p>A simple function that returns a constant number (2.0) with no parameters.</p>
+                    
+                    <h6>Parameters:</h6>
+                    <p><code>None</code></p>
+                    
+                    <h6>Returns:</h6>
+                    <p><code>Number: 2.0</code></p>
+                    
+                    <h6>Usage Example:</h6>
+                    <pre class="bg-light p-3"><code>return GetNum2Func()</code></pre>
+                    <p><strong>Result:</strong> 2</p>
+                    
+                    <h6>Source Code:</h6>
+                    <pre class="bg-dark text-light p-3" style="font-size: 0.85em;"><code>public class GetNum2Func : BaseFunction
+{
+    public GetNum2Func() : base(nameof(GetNum2Func), 0)
+    {
+    }
+
+    public override IValue Execute()
+    {
+        return new Value(2.0);
+    }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">GetNum3Func</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Description:</h6>
+                    <p>A function that takes a string parameter and returns a number based on the input value. 
+                    Demonstrates parameter handling, validation, and conditional logic.</p>
+                    
+                    <h6>Parameters:</h6>
+                    <ul>
+                        <li><code>param1</code> (String): Input string to evaluate</li>
+                    </ul>
+                    
+                    <h6>Returns:</h6>
+                    <ul>
+                        <li><code>3.0</code> if the parameter equals "ABC" (case-insensitive)</li>
+                        <li><code>0.0</code> for any other value</li>
+                    </ul>
+                    
+                    <h6>Usage Examples:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <pre class="bg-light p-3"><code>return GetNum3Func('ABC')</code></pre>
+                            <p><strong>Result:</strong> 3</p>
+                        </div>
+                        <div class="col-md-6">
+                            <pre class="bg-light p-3"><code>return GetNum3Func('XYZ')</code></pre>
+                            <p><strong>Result:</strong> 0</p>
+                        </div>
+                    </div>
+                    
+                    <h6>Complex Example:</h6>
+                    <pre class="bg-light p-3"><code>return Max(GetNum1Func(), GetNum2Func()) * GetNum3Func('ABC')</code></pre>
+                    <p><strong>Result:</strong> 6 (Max of 1 and 2 is 2, multiplied by 3)</p>
+                    
+                    <h6>Source Code:</h6>
+                    <pre class="bg-dark text-light p-3" style="font-size: 0.85em;"><code>public class GetNum3Func : BaseFunction
+{
+    public GetNum3Func() : base(nameof(GetNum3Func), 1)
+    {
+    }
+
+    public override IValue Execute()
+    {
+        // Validate parameter count
+        if (Params.Count() != 1)
+        {
+            throw new Exception("GetNum3Func expects exactly one parameter.");
+        }
+
+        // Validate parameter type
+        if (Params.Any(x => !x.Is&lt;string&gt;()))
+        {
+            throw new Exception("GetNum3Func expects a string parameter.");
+        }
+
+        // Get the first parameter
+        var firstParam = Params.First();
+        var paramValue = firstParam.As&lt;string&gt;();
+
+        // Return different values based on input
+        return paramValue.Equals("ABC", StringComparison.OrdinalIgnoreCase) 
+            ? new Value(3.0) 
+            : new Value(0.0);
+    }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">How to Create Your Own Custom Function</h5>
+        </div>
+        <div class="card-body">
+            <h6>Step 1: Create a class that extends BaseFunction</h6>
+            <pre class="bg-light p-3"><code>using RecipeCalculator.Common.Function;
+using RecipeCalculator.Common.Values;
+
+public class MyCustomFunc : BaseFunction
+{
+    // Constructor: name and parameter count
+    public MyCustomFunc() : base(nameof(MyCustomFunc), 1)
+    {
+    }
+
+    public override IValue Execute()
+    {
+        // Your logic here
+        // Access parameters via: Params
+        // Return: new Value(result)
+        return new Value(42.0);
+    }
+}</code></pre>
+            
+            <h6 class="mt-3">Step 2: Register the function when executing formulas</h6>
+            <p>Custom functions are passed to the <code>EngineRunner.Execute()</code> method:</p>
+            <pre class="bg-light p-3"><code>var functions = new IFunction[] 
+{ 
+    new GetNum1Func(), 
+    new GetNum2Func(), 
+    new GetNum3Func() 
+};
+
+EngineRunner.Execute(formulas, functions);</code></pre>
+            
+            <h6 class="mt-3">Step 3: Use in formulas</h6>
+            <pre class="bg-light p-3"><code>return MyCustomFunc(parameter)</code></pre>
+            
+            <h6 class="mt-3">Key Points:</h6>
+            <ul>
+                <li><strong>Constructor parameters:</strong> Function name and expected parameter count</li>
+                <li><strong>Params property:</strong> Access function parameters (IEnumerable&lt;IValue&gt;)</li>
+                <li><strong>Type checking:</strong> Use <code>param.Is&lt;T&gt;()</code> and <code>param.As&lt;T&gt;()</code></li>
+                <li><strong>Return value:</strong> Must return <code>IValue</code> (wrap with <code>new Value()</code>)</li>
+                <li><strong>Supported types:</strong> double, string, bool</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">Try It Yourself</h5>
+        </div>
+        <div class="card-body">
+            <p>Go to the <a href="/">Formula Calculator</a> and try these examples:</p>
+            
+            <div class="mb-3">
+                <strong>Example 1: Basic Usage</strong>
+                <pre class="bg-light p-2"><code>return GetNum1Func() + GetNum2Func()</code></pre>
+                <small class="text-muted">Expected Result: 3</small>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Example 2: With Built-in Functions</strong>
+                <pre class="bg-light p-2"><code>return Max(GetNum1Func(), GetNum2Func())</code></pre>
+                <small class="text-muted">Expected Result: 2</small>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Example 3: With Parameters</strong>
+                <pre class="bg-light p-2"><code>return GetNum3Func('ABC') + GetNum3Func('XYZ')</code></pre>
+                <small class="text-muted">Expected Result: 3 (3 + 0)</small>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Example 4: Complex Expression</strong>
+                <pre class="bg-light p-2"><code>return Max(GetNum1Func(), GetNum2Func()) * GetNum3Func('ABC')</code></pre>
+                <small class="text-muted">Expected Result: 6</small>
+            </div>
+            
+            <div class="mb-3">
+                <strong>Example 5: With Conditionals</strong>
+                <pre class="bg-light p-2"><code>if (GetNum3Func('ABC') > 0) then
+  return GetNum1Func() + GetNum2Func()
+else
+  return 0
+end</code></pre>
+                <small class="text-muted">Expected Result: 3</small>
+            </div>
+        </div>
+    </div>
+</div>

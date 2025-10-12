@@ -1,0 +1,708 @@
+@page "/"
+@using RecipeCalculator.UI.Functions
+@inject IEngineRunner EngineRunner
+@inject IParsingContext ParsingContext
+@inject FormulaStorageService StorageService
+@inject VariableStorageService VariableService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Recipe Calculator - Formula Manager</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Recipe Calculator - Formula Manager</h1>
+    
+    <div class="row">
+        <!-- Formula List Panel -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Saved Formulas</h5>
+                    <button class="btn btn-sm btn-success" @onclick="CreateNewFormula" title="New Formula">
+                        ➕
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (formulas.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var formula in formulas.OrderByDescending(f => f.ModifiedAt))
+                            {
+                                <div class="list-group-item list-group-item-action @(currentFormula?.Id == formula.Id ? "active" : "")"
+                                     style="cursor: pointer;">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div @onclick="() => LoadFormula(formula)" style="flex-grow: 1;">
+                                            <h6 class="mb-1">@formula.Name</h6>
+                                            <small>@formula.ModifiedAt.ToString("g")</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteFormula(formula.Id)" 
+                                                @onclick:stopPropagation="true" title="Delete">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-center text-muted">
+                            <p>No formulas saved yet.</p>
+                            <p>Click ➕ to create one!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6>Quick Examples</h6>
+                </div>
+                <div class="card-body p-2">
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2" @onclick="LoadSimpleExample">
+                        Simple Math
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2" @onclick="LoadConditionalExample">
+                        Conditional Logic
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary w-100 mb-2" @onclick="LoadFunctionExample">
+                        Functions
+                    </button>
+                    <button class="btn btn-sm btn-outline-success w-100" @onclick="LoadDependencyExample">
+                        Dependencies
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6>Cache Management</h6>
+                </div>
+                <div class="card-body p-2">
+                    <button class="btn btn-sm btn-outline-warning w-100 mb-2" @onclick="ClearBrowserCache">
+                        🗑️ Clear Browser Storage
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning w-100" @onclick="ClearEngineCache">
+                        🗑️ Clear Engine Cache
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Variables</h6>
+                    <button class="btn btn-sm btn-primary" @onclick="() => showVariableModal = true" title="Add Variable">
+                        ➕
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (variables.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var variable in variables.OrderBy(v => v.Name))
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div style="flex-grow: 1;">
+                                        <strong>@variable.Name</strong>
+                                        <br/>
+                                        <small class="text-muted">@variable.Type: </small>
+                                        <small>@variable.Value</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteVariable(variable.Name)" title="Delete">
+                                        🗑️
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-2 text-center text-muted">
+                            <small>No variables defined.</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- Editor Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Formula Editor</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="formulaName" class="form-label">Formula Name:</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="formulaName" 
+                               @bind="formulaName" 
+                               placeholder="Enter formula name (e.g., DiscountCalculator)" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="formulaCode" class="form-label">Formula Code:</label>
+                        <textarea class="form-control font-monospace" 
+                                  id="formulaCode"
+                                  @bind="formulaCode" 
+                                  rows="15"
+                                  placeholder="// Enter your formula here&#10;// Example: return 2 + 2"
+                                  style="font-size: 14px; line-height: 1.5;"></textarea>
+                        <small class="form-text text-muted">
+                            Write your formula using the syntax from the guide below.
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" @onclick="ExecuteFormula">
+                            ▶️ Execute
+                        </button>
+                        <button class="btn btn-success" @onclick="SaveFormula" disabled="@(string.IsNullOrWhiteSpace(formulaName))">
+                            💾 Save Formula
+                        </button>
+                        <button class="btn btn-secondary" @onclick="ClearEditor">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Result and Guide Panel -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Result</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(resultMessage))
+                    {
+                        <div class="alert @(isError ? "alert-danger" : "alert-success")" role="alert">
+                            <h6 class="alert-heading">@(isError ? "Error" : "Success")</h6>
+                            <pre class="mb-0" style="white-space: pre-wrap; font-size: 0.9em;">@resultMessage</pre>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Execute a formula to see results.</p>
+                    }
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6>Syntax Guide</h6>
+                </div>
+                <div class="card-body" style="font-size: 0.85em; max-height: 400px; overflow-y: auto;">
+                    <h6>Basic:</h6>
+                    <code>return 2 + 2</code>
+                    
+                    <h6 class="mt-3">Dependencies:</h6>
+                    <pre style="font-size: 0.85em;">// Reference other formulas
+return GetOutputFrom('FormulaName')</pre>
+                    <small class="text-muted">All saved formulas are executed together, allowing dependencies.</small>
+                    
+                    <h6 class="mt-3">Conditional:</h6>
+                    <pre style="font-size: 0.9em;">if (x > 10) then
+  return x * 2
+else
+  return x
+end</pre>
+                    
+                    <h6 class="mt-3">Math Functions:</h6>
+                    <small>
+                        Max, Min, Rnd, Ceil, Floor, Exp
+                    </small>
+                    
+                    <h6 class="mt-3">Date Functions:</h6>
+                    <small>
+                        Day, Month, Year, AddDays, GetDiffDays, DifferenceInMonths
+                    </small>
+                    
+                    <h6 class="mt-3">String Functions:</h6>
+                    <small>
+                        Substr, PaddedString
+                    </small>
+                    
+                    <h6 class="mt-3">Custom Functions:</h6>
+                    <small>
+                        GetNum1Func, GetNum2Func, GetNum3Func
+                        <br/>
+                        <a href="/custom-functions" class="text-decoration-none">See documentation →</a>
+                    </small>
+                    
+                    <h6 class="mt-3">Operators:</h6>
+                    <code style="font-size: 0.85em;">+ - * / ^ mod<br/>= &lt;&gt; &lt; &gt; &lt;= &gt;=<br/>and or !</code>
+                    
+                    <h6 class="mt-3">Variables:</h6>
+                    <small>Use defined variables directly in formulas (e.g., <code>price</code>, <code>quantity</code>)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Formula Generator - Full Width at Bottom -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <AIFormulaChat OnFormulaGenerated="HandleAIGenerated" />
+        </div>
+    </div>
+</div>
+
+@* Variable Modal *@
+@if (showVariableModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add/Edit Variable</h5>
+                    <button type="button" class="btn-close" @onclick="CloseVariableModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Variable Name:</label>
+                        <input type="text" class="form-control" @bind="newVariableName" placeholder="e.g., price, quantity" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type:</label>
+                        <select class="form-select" @bind="newVariableType">
+                            <option value="@VariableType.Number">Number</option>
+                            <option value="@VariableType.String">String</option>
+                            <option value="@VariableType.Boolean">Boolean</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Value:</label>
+                        @if (newVariableType == VariableType.Boolean)
+                        {
+                            <select class="form-select" @bind="newVariableValue">
+                                <option value="true">true</option>
+                                <option value="false">false</option>
+                            </select>
+                        }
+                        else if (newVariableType == VariableType.String)
+                        {
+                            <input type="text" class="form-control" @bind="newVariableValue" placeholder="Enter string value" />
+                        }
+                        else
+                        {
+                            <input type="number" step="any" class="form-control" @bind="newVariableValue" placeholder="Enter number" />
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseVariableModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveVariable">Save Variable</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<StoredFormula> formulas = new();
+    private StoredFormula? currentFormula;
+    
+    private List<StoredVariable> variables = new();
+    private bool showVariableModal = false;
+    private string newVariableName = "";
+    private string newVariableValue = "";
+    private VariableType newVariableType = VariableType.Number;
+    
+    private string formulaName = "";
+    private string formulaCode = "";
+    private string resultMessage = "";
+    private bool isError = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFormulas();
+        await LoadVariables();
+    }
+    
+    private async Task LoadFormulas()
+    {
+        formulas = await StorageService.GetAllFormulasAsync();
+        StateHasChanged();
+    }
+    
+    private async Task LoadVariables()
+    {
+        variables = await VariableService.GetAllVariablesAsync();
+        StateHasChanged();
+    }
+    
+    private void CreateNewFormula()
+    {
+        currentFormula = new StoredFormula
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "NewFormula",
+            Code = "// Enter your formula here\n// Example: return 2 + 2\n\n"
+        };
+        formulaName = currentFormula.Name;
+        formulaCode = currentFormula.Code;
+        resultMessage = "";
+        isError = false;
+    }
+    
+    private void LoadFormula(StoredFormula formula)
+    {
+        currentFormula = formula;
+        formulaName = formula.Name;
+        formulaCode = formula.Code;
+        resultMessage = "";
+        isError = false;
+    }
+    
+    private async Task SaveFormula()
+    {
+        if (string.IsNullOrWhiteSpace(formulaName))
+        {
+            ShowError("Please provide a formula name.");
+            return;
+        }
+        
+        try
+        {
+            var formula = currentFormula ?? new StoredFormula();
+            formula.Name = formulaName.Trim();
+            formula.Code = formulaCode;
+            
+            await StorageService.SaveFormulaAsync(formula);
+            await LoadFormulas();
+            
+            currentFormula = formulas.FirstOrDefault(f => f.Id == formula.Id);
+            ShowSuccess($"Formula '{formulaName}' saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to save formula: {ex.Message}");
+        }
+    }
+    
+    private async Task DeleteFormula(string id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this formula?"))
+        {
+            return;
+        }
+        
+        try
+        {
+            await StorageService.DeleteFormulaAsync(id);
+            await LoadFormulas();
+            
+            if (currentFormula?.Id == id)
+            {
+                ClearEditor();
+            }
+            
+            ShowSuccess("Formula deleted successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to delete formula: {ex.Message}");
+        }
+    }
+    
+    private void ExecuteFormula()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(formulaName))
+            {
+                ShowError("Please provide a formula name.");
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(formulaCode))
+            {
+                ShowError("Please provide formula code.");
+                return;
+            }
+            
+            ParsingContext.Errors.Clear();
+            
+            // Load variables into the context
+            foreach (var variable in variables)
+            {
+                RecipeCalculator.Common.Values.IValue value;
+                
+                switch (variable.Type)
+                {
+                    case VariableType.Number:
+                        if (double.TryParse(variable.Value, out var numValue))
+                        {
+                            value = new RecipeCalculator.Common.Values.Value(numValue);
+                            ParsingContext.VariableCache.Set(variable.Name, value);
+                        }
+                        break;
+                    case VariableType.String:
+                        value = new RecipeCalculator.Common.Values.Value(variable.Value);
+                        ParsingContext.VariableCache.Set(variable.Name, value);
+                        break;
+                    case VariableType.Boolean:
+                        if (bool.TryParse(variable.Value, out var boolValue))
+                        {
+                            value = new RecipeCalculator.Common.Values.Value(boolValue);
+                            ParsingContext.VariableCache.Set(variable.Name, value);
+                        }
+                        break;
+                }
+            }
+            
+            // Create all formulas from saved formulas
+            var allFormulas = new List<RecipeCalculator.Common.Formulas.Formula>();
+            
+            // Add all saved formulas first
+            foreach (var savedFormula in formulas)
+            {
+                var f = new RecipeCalculator.Common.Formulas.Formula(savedFormula.Name, savedFormula.Code);
+                allFormulas.Add(f);
+            }
+            
+            // Add the current formula being edited (if it's not already in the saved list)
+            var currentFormulaName = formulaName.Trim();
+            if (!formulas.Any(f => f.Name.Equals(currentFormulaName, StringComparison.OrdinalIgnoreCase)))
+            {
+                var currentFormula = new RecipeCalculator.Common.Formulas.Formula(currentFormulaName, formulaCode);
+                allFormulas.Add(currentFormula);
+            }
+            else
+            {
+                // Replace the saved version with the current edited version
+                allFormulas.RemoveAll(f => f.Name.Equals(currentFormulaName, StringComparison.OrdinalIgnoreCase));
+                var currentFormula = new RecipeCalculator.Common.Formulas.Formula(currentFormulaName, formulaCode);
+                allFormulas.Add(currentFormula);
+            }
+            
+            // Parse all formulas
+            foreach (var f in allFormulas)
+            {
+                var parseTree = RecipeCalculator.Engine.Parser.FormulaParserHelper.Parse(f);
+                ParsingContext.ParseTreeCache.Set(f, parseTree);
+            }
+            
+            // Prepare custom functions
+            var customFunctions = new RecipeCalculator.Common.Function.IFunction[]
+            {
+                new GetNum1Func(),
+                new GetNum2Func(),
+                new GetNum3Func()
+            };
+            
+            // Execute all formulas together with custom functions
+            EngineRunner.Execute(allFormulas, customFunctions);
+            
+            if (ParsingContext.Errors.Any())
+            {
+                var errors = string.Join("\n", ParsingContext.Errors.Select(e => $"{e.Key}: {e.Value}"));
+                ShowError($"Execution errors:\n{errors}");
+                return;
+            }
+            
+            // Get result for the current formula
+            var result = ParsingContext.FormulaResultCache.Get(currentFormulaName);
+            if (result != null)
+            {
+                var value = result.Get();
+                ShowSuccess($"Formula: {currentFormulaName}\nResult: {value}\nType: {value?.GetType().Name ?? "null"}");
+            }
+            else
+            {
+                ShowError($"No result returned for formula '{currentFormulaName}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Error: {ex.Message}");
+        }
+    }
+    
+    private void ClearEditor()
+    {
+        currentFormula = null;
+        formulaName = "";
+        formulaCode = "";
+        resultMessage = "";
+        isError = false;
+    }
+    
+    private void LoadSimpleExample()
+    {
+        formulaName = "SimpleMath";
+        formulaCode = @"// Simple arithmetic
+return 2 + 2 * 3";
+        currentFormula = null;
+        resultMessage = "";
+    }
+    
+    private void LoadConditionalExample()
+    {
+        formulaName = "DiscountCalculator";
+        formulaCode = @"// Calculate discount based on quantity
+// Add variables: quantity (Number: 75) and price (Number: 100)
+// Then execute this formula
+
+if (quantity > 100) then
+  return price * 0.8  // 20% discount
+else if (quantity > 50) then
+  return price * 0.9  // 10% discount  
+else
+  return price  // No discount
+end";
+        currentFormula = null;
+        resultMessage = "";
+    }
+    
+    private void LoadFunctionExample()
+    {
+        formulaName = "MathFunctions";
+        formulaCode = @"// Using built-in functions
+return Max(Floor(3.8), Ceil(2.2))";
+        currentFormula = null;
+        resultMessage = "";
+    }
+    
+    private void LoadDependencyExample()
+    {
+        formulaName = "DependencyExample";
+        formulaCode = @"// This formula uses GetOutputFrom() to reference other formulas
+// Make sure to save 'Base1' and 'Base2' formulas first!
+// 
+// Example: Create these formulas:
+// 1. Name: Base1, Code: return 10
+// 2. Name: Base2, Code: return 20
+// 3. Then run this formula
+return GetOutputFrom('Base1') + GetOutputFrom('Base2')";
+        currentFormula = null;
+        resultMessage = "";
+    }
+    
+    private void CloseVariableModal()
+    {
+        showVariableModal = false;
+        newVariableName = "";
+        newVariableValue = "";
+        newVariableType = VariableType.Number;
+    }
+    
+    private async Task SaveVariable()
+    {
+        if (string.IsNullOrWhiteSpace(newVariableName))
+        {
+            ShowError("Please provide a variable name.");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(newVariableValue))
+        {
+            ShowError("Please provide a variable value.");
+            return;
+        }
+        
+        try
+        {
+            var variable = new StoredVariable
+            {
+                Name = newVariableName.Trim(),
+                Value = newVariableValue,
+                Type = newVariableType
+            };
+            
+            await VariableService.SaveVariableAsync(variable);
+            await LoadVariables();
+            
+            CloseVariableModal();
+            ShowSuccess($"Variable '{newVariableName}' saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to save variable: {ex.Message}");
+        }
+    }
+    
+    private async Task DeleteVariable(string name)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete variable '{name}'?"))
+        {
+            return;
+        }
+        
+        try
+        {
+            await VariableService.DeleteVariableAsync(name);
+            await LoadVariables();
+            
+            ShowSuccess($"Variable '{name}' deleted successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to delete variable: {ex.Message}");
+        }
+    }
+    
+    private void HandleAIGenerated(string generatedCode)
+    {
+        formulaCode = generatedCode;
+        ShowSuccess("AI-generated formula loaded! Review and execute when ready.");
+    }
+    
+    private async Task ClearBrowserCache()
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Clear all browser storage (formulas and variables)?"))
+        {
+            return;
+        }
+        
+        try
+        {
+            await StorageService.ClearAllAsync();
+            await VariableService.ClearAllAsync();
+            
+            // Reload data
+            await LoadFormulas();
+            await LoadVariables();
+            ClearEditor();
+            
+            ShowSuccess("Browser storage cache cleared successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to clear browser cache: {ex.Message}");
+        }
+    }
+    
+    private void ClearEngineCache()
+    {
+        try
+        {
+            ParsingContext.FormulaResultCache.Clear();
+            ParsingContext.FunctionCache.Clear();
+            ParsingContext.FunctionResultCache.Clear();
+            ParsingContext.ParseTreeCache.Clear();
+            ParsingContext.VariableCache.Clear();
+            ParsingContext.Errors.Clear();
+            
+            ShowSuccess("Engine cache cleared successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to clear engine cache: {ex.Message}");
+        }
+    }
+    
+    private void ShowError(string message)
+    {
+        resultMessage = message;
+        isError = true;
+    }
+    
+    private void ShowSuccess(string message)
+    {
+        resultMessage = message;
+        isError = false;
+    }
+}

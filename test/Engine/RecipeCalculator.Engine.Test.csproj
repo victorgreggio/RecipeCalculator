@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Engine\RecipeCalculator.Engine.csproj" />
+    <ProjectReference Include="..\..\src\RecipeCalculator.Engine\RecipeCalculator.Engine.csproj" />
   </ItemGroup>
 
   <ItemGroup>
