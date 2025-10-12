@@ -38,8 +38,18 @@ jobs:
       - name: Publish Blazor WASM
         run: dotnet publish src/RecipeCalculator.UI/RecipeCalculator.UI.csproj -c Release -o publish
 
+      - name: Check if Azure secret is available
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "secret_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "secret_exists=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build And Deploy
         id: builddeploy
+        if: steps.check_secret.outputs.secret_exists == 'true' || vars.SKIP_DEPLOY_ON_MISSING_SECRETS != 'true'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
@@ -50,14 +60,37 @@ jobs:
           ###### End of Repository/Build Configurations ######
           skip_app_build: true
 
+      - name: Deployment Skipped
+        if: steps.check_secret.outputs.secret_exists == 'false' && vars.SKIP_DEPLOY_ON_MISSING_SECRETS == 'true'
+        run: |
+          echo "⚠️ Azure deployment token secret is missing."
+          echo "Deployment skipped as SKIP_DEPLOY_ON_MISSING_SECRETS is enabled."
+          echo "To enable deployment, add AZURE_STATIC_WEB_APPS_API_TOKEN secret to your repository."
+
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
     steps:
+      - name: Check if Azure secret is available
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then
+            echo "secret_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "secret_exists=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Close Pull Request
         id: closepullrequest
+        if: steps.check_secret.outputs.secret_exists == 'true' || vars.SKIP_DEPLOY_ON_MISSING_SECRETS != 'true'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "close"
+
+      - name: Close PR Skipped
+        if: steps.check_secret.outputs.secret_exists == 'false' && vars.SKIP_DEPLOY_ON_MISSING_SECRETS == 'true'
+        run: |
+          echo "⚠️ Azure deployment token secret is missing."
+          echo "Pull request close action skipped as SKIP_DEPLOY_ON_MISSING_SECRETS is enabled."
