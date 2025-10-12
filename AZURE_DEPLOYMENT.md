@@ -389,6 +389,10 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Authenticate with GitHub Packages
+        run: |
+          dotnet nuget update source github --username victorgreggio --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
       - name: Restore dependencies
         run: dotnet restore
 

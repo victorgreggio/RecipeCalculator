@@ -148,6 +148,23 @@ RecipeCalculator/
 ### Requirements
 - .NET 9.0 SDK
 - C# 12
+- GitHub Personal Access Token (for accessing GitHub Packages)
+
+### Setting Up GitHub Packages Authentication
+
+This project uses packages from GitHub Packages. To build locally, you need to authenticate:
+
+1. **Create a GitHub Personal Access Token:**
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Generate a new token with `read:packages` scope
+   - Copy the token
+
+2. **Add credentials to NuGet:**
+   ```bash
+   dotnet nuget update source github --username YOUR_GITHUB_USERNAME --password YOUR_GITHUB_TOKEN --store-password-in-clear-text
+   ```
+
+   Replace `YOUR_GITHUB_USERNAME` with your GitHub username and `YOUR_GITHUB_TOKEN` with your personal access token.
 
 ### Build
 ```bash

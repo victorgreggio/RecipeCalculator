@@ -24,9 +24,10 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
-          source-url: https://nuget.pkg.github.com/victorgreggio/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate with GitHub Packages
+        run: |
+          dotnet nuget update source github --username victorgreggio --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Restore dependencies
         run: dotnet restore
