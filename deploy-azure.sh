@@ -87,6 +87,8 @@ else
     
     echo ""
     echo -e "${YELLOW}Building application...${NC}"
+    echo -e "${YELLOW}Note: Ensure you have authenticated with GitHub Packages.${NC}"
+    echo -e "${YELLOW}Run: dotnet nuget update source github --username YOUR_USERNAME --password YOUR_TOKEN --store-password-in-clear-text${NC}"
     dotnet publish src/RecipeCalculator.UI/RecipeCalculator.UI.csproj -c Release -o publish
     
     echo ""
