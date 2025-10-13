@@ -351,3 +351,6 @@ MigrationBackup/
 
 # Rider
 .idea/
+
+# Data(CSV) files
+*.csv

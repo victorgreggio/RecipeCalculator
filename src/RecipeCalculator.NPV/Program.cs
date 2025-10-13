@@ -4,8 +4,6 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using RecipeCalculator.Common.Formulas;
-using RecipeCalculator.Common.Function;
 using RecipeCalculator.Common.Values;
 using RecipeCalculator.Engine;
 using RecipeCalculator.Engine.Formulas;

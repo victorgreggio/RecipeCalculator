@@ -11,6 +11,13 @@
 <div class="container-fluid mt-4">
     <h1 class="mb-4">Recipe Calculator - Formula Manager</h1>
     
+    <!-- AI Formula Generator - Full Width at Top -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <AIFormulaChat OnFormulaGenerated="HandleAIGenerated" />
+        </div>
+    </div>
+    
     <div class="row">
         <!-- Formula List Panel -->
         <div class="col-md-3">
@@ -238,13 +245,6 @@ end</pre>
                     <small>Use defined variables directly in formulas (e.g., <code>price</code>, <code>quantity</code>)</small>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- AI Formula Generator - Full Width at Bottom -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <AIFormulaChat OnFormulaGenerated="HandleAIGenerated" />
         </div>
     </div>
 </div>
