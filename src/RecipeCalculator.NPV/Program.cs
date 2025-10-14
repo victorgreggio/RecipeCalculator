@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using RecipeCalculator.Common.Values;
+using RecipeCalculator.Common.Formulas;
 using RecipeCalculator.Engine;
 using RecipeCalculator.Engine.Formulas;
 using RecipeCalculator.Engine.Function;
@@ -44,14 +44,14 @@ if (args[0] == "--generate-sample")
         Console.WriteLine("Usage: RecipeCalculator.NPV --generate-sample <count> [output_file]");
         return 1;
     }
-    
+
     int count = int.Parse(args[1]);
     string outputPath = args.Length > 2 ? args[2] : "sample_projects.csv";
-    
+
     var sw = Stopwatch.StartNew();
     SampleFileGenerator.GenerateSampleFile(outputPath, count);
     sw.Stop();
-    
+
     Console.WriteLine($"Generation completed in {sw.Elapsed.TotalSeconds:F2} seconds");
     return 0;
 }
@@ -76,7 +76,7 @@ try
 {
     await ProcessFileAsync(inputFile, outputFile, budget);
     stopwatch.Stop();
-    
+
     Console.WriteLine();
     Console.WriteLine($"Processing completed in {stopwatch.Elapsed.TotalSeconds:F2} seconds");
     return 0;
@@ -93,7 +93,7 @@ static async Task ProcessFileAsync(string inputFile, string outputFile, double b
     var fileInfo = new FileInfo(inputFile);
     long fileSize = fileInfo.Length;
     Console.WriteLine($"File size: {fileSize / (1024.0 * 1024.0):F2} MB");
-    
+
     // Setup Engine with all required services
     var services = new ServiceCollection();
     services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Error));
@@ -105,27 +105,14 @@ static async Task ProcessFileAsync(string inputFile, string outputFile, double b
     services.AddSingleton<IParsingContext, DefaultParsingContext>();
     services.AddSingleton<IEngineRunner, EngineRunner>();
     var serviceProvider = services.BuildServiceProvider();
-    
+
     var parsingContext = serviceProvider.GetRequiredService<IParsingContext>();
     var engine = serviceProvider.GetRequiredService<IEngineRunner>();
-    
-    // Register the CalculateNPVFunc function
-    var calculateNPVFunc = new CalculateNPVFunc();
-    parsingContext.FunctionCache.Set(calculateNPVFunc);
-    
+
     Console.WriteLine("RecipeCalculator.Engine initialized successfully");
-    Console.WriteLine($"CalculateNPVFunc registered with {calculateNPVFunc.NumOfArgs} parameters");
     Console.WriteLine();
-    
-    // Use memory-mapped file for large files
-    if (fileSize > 100 * 1024 * 1024) // > 100 MB
-    {
-        await ProcessLargeFileAsync(inputFile, outputFile, engine, parsingContext, budget);
-    }
-    else
-    {
-        await ProcessStandardFileAsync(inputFile, outputFile, engine, parsingContext, budget);
-    }
+
+    await ProcessStandardFileAsync(inputFile, outputFile, engine, parsingContext, budget);
 }
 
 static async Task ProcessStandardFileAsync(string inputFile, string outputFile, IEngineRunner engine, IParsingContext parsingContext, double budget)
@@ -133,56 +120,53 @@ static async Task ProcessStandardFileAsync(string inputFile, string outputFile, 
     int totalProcessed = 0;
     int totalErrors = 0;
     var results = new ConcurrentBag<(ProjectData data, ProjectResult result)>();
-    
+
     var lines = File.ReadLines(inputFile).ToList();
-    
+
     // Skip header
     if (lines.Count > 0)
     {
         lines = lines.Skip(1).ToList();
     }
-    
-    Parallel.ForEach(
-        lines,
-        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-        line =>
+
+    foreach (var line in lines)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            continue;
+
+        try
         {
-            if (string.IsNullOrWhiteSpace(line))
-                return;
-            
-            try
+            var (data, result) = ProcessLineWithData(line, engine, parsingContext);
+            results.Add((data, result));
+
+            int processed = Interlocked.Increment(ref totalProcessed);
+            if (processed % 100000 == 0)
             {
-                var (data, result) = ProcessLineWithData(line);
-                results.Add((data, result));
-                
-                int processed = Interlocked.Increment(ref totalProcessed);
-                if (processed % 100000 == 0)
-                {
-                    Console.WriteLine($"Processed {processed:N0} projects...");
-                }
+                Console.WriteLine($"Processed {processed:N0} projects...");
             }
-            catch (Exception)
-            {
-                Interlocked.Increment(ref totalErrors);
-            }
-        });
-    
+        }
+        catch (Exception)
+        {
+            Interlocked.Increment(ref totalErrors);
+        }
+    }
+
     Console.WriteLine($"Total projects processed: {totalProcessed:N0}");
     if (totalErrors > 0)
     {
         Console.WriteLine($"Total errors: {totalErrors:N0}");
     }
     Console.WriteLine();
-    
+
     // Perform portfolio optimization
     Console.WriteLine("=== Portfolio Optimization ===");
     Console.WriteLine($"Budget: ${budget:N0}");
     Console.WriteLine("Optimizing project selection to maximize Adjusted NPV...");
     Console.WriteLine();
-    
+
     var projectList = results.ToList();
     var optimizationResult = PortfolioOptimizer.OptimizePortfolioWithData(projectList, budget);
-    
+
     Console.WriteLine($"Optimization Status: {optimizationResult.Status}");
     Console.WriteLine($"Solve Time: {optimizationResult.SolveTime:F3} seconds");
     Console.WriteLine($"Selected Projects: {optimizationResult.ProjectCount}");
@@ -190,32 +174,31 @@ static async Task ProcessStandardFileAsync(string inputFile, string outputFile, 
     Console.WriteLine($"Remaining Budget: ${optimizationResult.RemainingBudget:N2}");
     Console.WriteLine($"Total Adjusted NPV: ${optimizationResult.TotalAdjustedNPV:N2}");
     Console.WriteLine();
-    
+
     Console.WriteLine("Selected Projects:");
     foreach (var projectId in optimizationResult.SelectedProjects.OrderBy(p => p))
     {
         Console.WriteLine($"  - {projectId}");
     }
     Console.WriteLine();
-    
+
     // Write results to file
     using var outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None, 65536);
     using var writer = new StreamWriter(outputStream, Encoding.UTF8);
-    
-    await writer.WriteLineAsync("ProjectId,InitialCost,NPV,AdjustedNPV,AlignsWithBusinessStrategyABC,Selected");
-    
+
+    await writer.WriteLineAsync("ProjectId,InitialCost,AdjustedNPV,AlignsWithBusinessStrategyABC,Selected");
+
     Console.WriteLine("Writing results...");
     foreach (var (data, result) in results.OrderBy(r => r.data.ProjectId))
     {
-        bool alignsWithStrategy = Math.Abs(result.AdjustedNPV - result.NPV) < 0.01;
         bool selected = optimizationResult.SelectedProjects.Contains(data.ProjectId);
         await writer.WriteLineAsync(
-            $"{data.ProjectId},{data.InitialCost:F2},{result.NPV:F2},{result.AdjustedNPV:F2},{(alignsWithStrategy ? "TRUE" : "FALSE")},{(selected ? "YES" : "NO")}");
+            $"{data.ProjectId},{data.InitialCost:F2},{result.AdjustedNPV:F2},{(data.AlignsWithBusinessStrategy ? "TRUE" : "FALSE")},{(selected ? "YES" : "NO")}");
     }
-    
+
     // Write optimization summary to separate file
     string summaryFile = Path.ChangeExtension(outputFile, ".optimization.txt");
-    await File.WriteAllTextAsync(summaryFile, 
+    await File.WriteAllTextAsync(summaryFile,
         $"Portfolio Optimization Summary\n" +
         $"==============================\n\n" +
         $"Budget: ${budget:N2}\n" +
@@ -229,148 +212,25 @@ static async Task ProcessStandardFileAsync(string inputFile, string outputFile, 
         $"Selected Projects:\n" +
         string.Join("\n", optimizationResult.SelectedProjects.OrderBy(p => p).Select(p => $"  - {p}"))
     );
-    
+
     Console.WriteLine($"Optimization summary written to: {summaryFile}");
 }
 
-static async Task ProcessLargeFileAsync(string inputFile, string outputFile, IEngineRunner engine, IParsingContext parsingContext, double budget)
-{
-    Console.WriteLine("Using memory-mapped file for large dataset...");
-    
-    int totalProcessed = 0;
-    int totalErrors = 0;
-    var results = new ConcurrentBag<(ProjectData data, ProjectResult result)>();
-    
-    // Read and process in chunks
-    const int chunkSize = 100000; // Process 100k lines at a time
-    
-    using var fileStream = new FileStream(inputFile, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.SequentialScan);
-    using var reader = new StreamReader(fileStream, Encoding.UTF8);
-    
-    // Skip header
-    await reader.ReadLineAsync();
-    
-    var chunk = new List<string>(chunkSize);
-    string? line;
-    
-    while ((line = await reader.ReadLineAsync()) != null)
-    {
-        if (!string.IsNullOrWhiteSpace(line))
-        {
-            chunk.Add(line);
-        }
-        
-        if (chunk.Count >= chunkSize)
-        {
-            var chunkToProcess = chunk.ToArray();
-            chunk.Clear();
-            
-            // Process chunk in parallel
-            Parallel.ForEach(chunkToProcess,
-                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                chunkLine =>
-                {
-                    try
-                    {
-                        var result = ProcessLineWithData(chunkLine);
-                        results.Add(result);
-                        
-                        int processed = Interlocked.Increment(ref totalProcessed);
-                        if (processed % 100000 == 0)
-                        {
-                            Console.WriteLine($"Processed {processed:N0} projects...");
-                        }
-                    }
-                    catch
-                    {
-                        Interlocked.Increment(ref totalErrors);
-                    }
-                });
-        }
-    }
-    
-    // Process remaining lines
-    if (chunk.Count > 0)
-    {
-        Parallel.ForEach(chunk,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-            chunkLine =>
-            {
-                try
-                {
-                    var result = ProcessLineWithData(chunkLine);
-                    results.Add(result);
-                    Interlocked.Increment(ref totalProcessed);
-                }
-                catch
-                {
-                    Interlocked.Increment(ref totalErrors);
-                }
-            });
-    }
-    
-    Console.WriteLine($"Total projects processed: {totalProcessed:N0}");
-    if (totalErrors > 0)
-    {
-        Console.WriteLine($"Total errors: {totalErrors:N0}");
-    }
-    Console.WriteLine();
-    
-    // Perform optimization (same as standard)
-    Console.WriteLine("=== Portfolio Optimization ===");
-    Console.WriteLine($"Budget: ${budget:N0}");
-    Console.WriteLine("Optimizing project selection...");
-    Console.WriteLine();
-    
-    var projectList = results.ToList();
-    var optimizationResult = PortfolioOptimizer.OptimizePortfolioWithData(projectList, budget);
-    
-    Console.WriteLine($"Optimization Status: {optimizationResult.Status}");
-    Console.WriteLine($"Solve Time: {optimizationResult.SolveTime:F3} seconds");
-    Console.WriteLine($"Selected Projects: {optimizationResult.ProjectCount}");
-    Console.WriteLine($"Total Investment: ${optimizationResult.TotalInvestment:N2}");
-    Console.WriteLine($"Remaining Budget: ${optimizationResult.RemainingBudget:N2}");
-    Console.WriteLine($"Total Adjusted NPV: ${optimizationResult.TotalAdjustedNPV:N2}");
-    Console.WriteLine();
-    
-    Console.WriteLine("Selected Projects:");
-    foreach (var projectId in optimizationResult.SelectedProjects.OrderBy(p => p))
-    {
-        Console.WriteLine($"  - {projectId}");
-    }
-    Console.WriteLine();
-    
-    // Write results
-    using var outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous);
-    using var writer = new StreamWriter(outputStream, Encoding.UTF8);
-    
-    await writer.WriteLineAsync("ProjectId,InitialCost,NPV,AdjustedNPV,AlignsWithBusinessStrategyABC,Selected");
-    
-    Console.WriteLine("Writing results...");
-    foreach (var (data, result) in results.OrderBy(r => r.data.ProjectId))
-    {
-        bool alignsWithStrategy = Math.Abs(result.AdjustedNPV - result.NPV) < 0.01;
-        bool selected = optimizationResult.SelectedProjects.Contains(data.ProjectId);
-        await writer.WriteLineAsync(
-            $"{data.ProjectId},{data.InitialCost:F2},{result.NPV:F2},{result.AdjustedNPV:F2},{(alignsWithStrategy ? "TRUE" : "FALSE")},{(selected ? "YES" : "NO")}");
-    }
-}
-
-static (ProjectData, ProjectResult) ProcessLineWithData(string line)
+static (ProjectData, ProjectResult) ProcessLineWithData(string line, IEngineRunner engine, IParsingContext parsingContext)
 {
     var parts = line.Split(',');
-    
+
     if (parts.Length < 19) // ProjectId + DiscountRate + InitialCost + 15 years + BusinessStrategyFlag
     {
         throw new FormatException($"Invalid line format: expected at least 19 fields, got {parts.Length}");
     }
-    
+
     string projectId = parts[0];
     string discountRateStr = parts[1];
     string initialCostStr = parts[2];
     double discountRate = double.Parse(discountRateStr, CultureInfo.InvariantCulture);
     double initialCost = double.Parse(initialCostStr, CultureInfo.InvariantCulture);
-    
+
     var cashFlowsStr = new List<string>();
     var cashFlows = new double[15];
     for (int i = 0; i < 15; i++)
@@ -378,33 +238,31 @@ static (ProjectData, ProjectResult) ProcessLineWithData(string line)
         cashFlowsStr.Add(parts[3 + i]);
         cashFlows[i] = double.Parse(parts[3 + i], CultureInfo.InvariantCulture);
     }
-    
+
     bool alignsWithStrategy = parts[18].Trim().Equals("TRUE", StringComparison.OrdinalIgnoreCase);
-    
+
     // Create ProjectData
     var projectData = new ProjectData(projectId, discountRate, initialCost, cashFlows, alignsWithStrategy);
-    
-    // Calculate NPV directly using the function (bypassing Engine to avoid caching issues)
-    var calculateNPVFunc = new CalculateNPVFunc();
-    var npvParams = new List<IValue>
-    {
-        new Value(discountRate),
-        new Value(initialCost)
-    };
-    foreach (var cf in cashFlows)
-    {
-        npvParams.Add(new Value(cf));
-    }
-    
-    calculateNPVFunc.Params = npvParams;
-    var npvResult = calculateNPVFunc.Execute();
-    double npv = npvResult.As<double>();
-    
-    // Calculate adjusted NPV based on business strategy alignment
+
+    // Build DSL formula to calculate NPV and apply strategy multiplier
+    var cashFlowsArgs = string.Join(", ", cashFlows.Select(cf => cf.ToString("F2", CultureInfo.InvariantCulture)));
     double strategyMultiplier = alignsWithStrategy ? 1.0 : 0.3;
-    double adjustedNpv = npv * strategyMultiplier;
-    
-    var projectResult = new ProjectResult(projectId, npv, adjustedNpv);
+    string formulaBody = $"return CalculateNPV({discountRate.ToString("F10", CultureInfo.InvariantCulture)}, {initialCost.ToString("F2", CultureInfo.InvariantCulture)}, {cashFlowsArgs}) * {strategyMultiplier.ToString("F1", CultureInfo.InvariantCulture)}";
+
+    // Create unique formula with global counter
+    string formulaName = $"NPV_{projectId}_{FormulaIdGenerator.GetNext()}";
+    var formula = new Formula(formulaName, formulaBody);
+
+    // Parse and execute formula through Engine with CalculateNPV function
+    var parseTree = FormulaParserHelper.Parse(formula);
+    parsingContext.ParseTreeCache.Set(formula, parseTree);
+    engine.Execute(new[] { formula }, new[] { new CalculateNPVFunc() });
+
+    // Get result from cache
+    var result = parsingContext.FormulaResultCache.Get(formulaName);
+    double adjustedNpv = result.As<double>();
+
+    var projectResult = new ProjectResult(projectId, adjustedNpv);
     return (projectData, projectResult);
 }
 

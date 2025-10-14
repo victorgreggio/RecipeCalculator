@@ -21,13 +21,11 @@ public readonly struct ProjectData
 public readonly struct ProjectResult
 {
     public string ProjectId { get; init; }
-    public double NPV { get; init; }
     public double AdjustedNPV { get; init; }
     
-    public ProjectResult(string projectId, double npv, double adjustedNpv)
+    public ProjectResult(string projectId, double adjustedNpv)
     {
         ProjectId = projectId;
-        NPV = npv;
         AdjustedNPV = adjustedNpv;
     }
 }

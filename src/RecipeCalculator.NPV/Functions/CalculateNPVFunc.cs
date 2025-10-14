@@ -13,7 +13,7 @@ namespace RecipeCalculator.NPV.Functions;
 /// </summary>
 public class CalculateNPVFunc : BaseFunction
 {
-    public CalculateNPVFunc() : base(nameof(CalculateNPVFunc), 17)
+    public CalculateNPVFunc() : base("CalculateNPV", 17)
     {
     }
 
