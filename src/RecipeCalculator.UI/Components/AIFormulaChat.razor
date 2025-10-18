@@ -230,6 +230,36 @@ Example usage:
 
     private string GetGrammarContext()
     {
+        try
+        {
+            var assembly = typeof(AIFormulaChat).Assembly;
+            var resourceName = assembly.GetManifestResourceNames()
+                .FirstOrDefault(name => name.EndsWith("Formula.g4"));
+            
+            if (resourceName != null)
+            {
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream != null)
+                {
+                    using var reader = new System.IO.StreamReader(stream);
+                    var grammarContent = reader.ReadToEnd();
+                    return $@"# ANTLR4 Grammar Definition
+{grammarContent}
+
+# Additional Syntax Notes
+- Every formula must start with 'return' or use if/then/else structure
+- Strings use single quotes: 'text'
+- Variables are accessed by name directly
+- No semicolons required";
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Fall back to simplified version if reading embedded resource fails
+        }
+        
+        // Fallback to simplified grammar
         return @"# Formula Syntax Rules
 - Every formula must start with 'return' or use if/then/else structure
 - Strings use single quotes: 'text'

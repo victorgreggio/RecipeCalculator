@@ -153,7 +153,7 @@
                                   id="formulaCode"
                                   @bind="formulaCode" 
                                   rows="15"
-                                  placeholder="// Enter your formula here&#10;// Example: return 2 + 2"
+                                  placeholder="// Enter your formula here, for example: return 2 + 2"
                                   style="font-size: 14px; line-height: 1.5;"></textarea>
                         <small class="form-text text-muted">
                             Write your formula using the syntax from the guide below.
@@ -411,6 +411,8 @@ end</pre>
     {
         try
         {
+            ClearEngineCache();
+            
             if (string.IsNullOrWhiteSpace(formulaName))
             {
                 ShowError("Please provide a formula name.");
@@ -423,7 +425,12 @@ end</pre>
                 return;
             }
             
+            // Clear engine caches before execution to prevent conflicts
             ParsingContext.Errors.Clear();
+            ParsingContext.FormulaResultCache.Clear();
+            ParsingContext.FunctionCache.Clear();
+            ParsingContext.FunctionResultCache.Clear();
+            ParsingContext.ParseTreeCache.Clear();
             
             // Load variables into the context
             foreach (var variable in variables)
@@ -456,16 +463,20 @@ end</pre>
             // Create all formulas from saved formulas
             var allFormulas = new List<RecipeCalculator.Common.Formulas.Formula>();
             
-            // Add all saved formulas first
+            // Add all saved formulas first, ensuring no duplicate names
+            var formulaNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var savedFormula in formulas)
             {
-                var f = new RecipeCalculator.Common.Formulas.Formula(savedFormula.Name, savedFormula.Code);
-                allFormulas.Add(f);
+                if (formulaNames.Add(savedFormula.Name))
+                {
+                    var f = new RecipeCalculator.Common.Formulas.Formula(savedFormula.Name, savedFormula.Code);
+                    allFormulas.Add(f);
+                }
             }
             
-            // Add the current formula being edited (if it's not already in the saved list)
+            // Add the current formula being edited (replace if it exists)
             var currentFormulaName = formulaName.Trim();
-            if (!formulas.Any(f => f.Name.Equals(currentFormulaName, StringComparison.OrdinalIgnoreCase)))
+            if (!formulaNames.Contains(currentFormulaName))
             {
                 var currentFormula = new RecipeCalculator.Common.Formulas.Formula(currentFormulaName, formulaCode);
                 allFormulas.Add(currentFormula);
@@ -514,12 +525,6 @@ end</pre>
             {
                 ShowError($"No result returned for formula '{currentFormulaName}'.");
             }
-            
-            // Clear caches except variables
-            ParsingContext.FormulaResultCache.Clear();
-            ParsingContext.FunctionCache.Clear();
-            ParsingContext.FunctionResultCache.Clear();
-            ParsingContext.ParseTreeCache.Clear();
         }
         catch (Exception ex)
         {
@@ -653,6 +658,13 @@ return GetOutputFrom('Base1') + GetOutputFrom('Base2')";
     private void HandleAIGenerated(string generatedCode)
     {
         formulaCode = generatedCode;
+        
+        // Set formula name to "GeneratedFormula" if empty
+        if (string.IsNullOrWhiteSpace(formulaName))
+        {
+            formulaName = "GeneratedFormula";
+        }
+        
         ShowSuccess("AI-generated formula loaded! Review and execute when ready.");
     }
     

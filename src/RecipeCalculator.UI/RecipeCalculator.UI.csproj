@@ -17,4 +17,8 @@
     <ProjectReference Include="..\RecipeCalculator.Common\RecipeCalculator.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\RecipeCalculator.Engine\Grammar\Formula.g4" Link="Grammar\Formula.g4" />
+  </ItemGroup>
+
 </Project>

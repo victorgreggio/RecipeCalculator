@@ -98,9 +98,11 @@ The system builds a comprehensive context including:
 
 ```
 # Grammar Rules
-- Formula syntax from ANTLR4 grammar
+- Complete ANTLR4 grammar (Formula.g4) embedded in the application
+- Full formula syntax from the grammar definition
 - All operators and keywords
 - Control flow structures
+- Token definitions and lexer rules
 
 # Available Functions
 - Built-in: Max, Min, Rnd, Ceil, Floor, etc.
@@ -115,6 +117,8 @@ The system builds a comprehensive context including:
 - Formula dependencies
 - Complex expressions
 ```
+
+**Note:** The Formula.g4 file from `RecipeCalculator.Engine\Grammar\` is embedded as a resource in the UI project and loaded at runtime to provide the LLM with the complete, authoritative grammar definition.
 
 ### 2. Prompt Engineering
 
@@ -316,6 +320,10 @@ end
 - `Layout/NavMenu.razor` - Added AI Settings link
 - `Pages/FormulaCalculator.razor` - Integrated AI chat component
 - `_Imports.razor` - Added Components namespace
+- `RecipeCalculator.UI.csproj` - Added Formula.g4 as embedded resource
+- `Components/AIFormulaChat.razor` - Loads Formula.g4 grammar at runtime
+- `Pages/FormulaCalculator.razor` - Integrated AI chat component
+- `_Imports.razor` - Added Components namespace
 
 ## Technical Architecture
 
@@ -344,10 +352,42 @@ public class LLMService
 The system provides rich context to the LLM:
 
 **Grammar Context:**
-- Syntax rules
-- Operators
+- Complete ANTLR4 grammar definition loaded from embedded Formula.g4 file
+- Full syntax rules including all production rules
+- All operators and their precedence
 - Control flow structures
 - Function signatures
+- Token definitions and lexer rules
+- Fallback to simplified grammar if resource loading fails
+
+**Implementation:**
+```csharp
+// AIFormulaChat.razor - GetGrammarContext()
+private string GetGrammarContext()
+{
+    try
+    {
+        var assembly = typeof(AIFormulaChat).Assembly;
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(name => name.EndsWith("Formula.g4"));
+        
+        if (resourceName != null)
+        {
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream != null)
+            {
+                using var reader = new System.IO.StreamReader(stream);
+                var grammarContent = reader.ReadToEnd();
+                return grammarContent; // Full ANTLR4 grammar
+            }
+        }
+    }
+    catch (Exception)
+    {
+        // Falls back to simplified version
+    }
+}
+```
 
 **Examples Context:**
 - 10 diverse formula examples
